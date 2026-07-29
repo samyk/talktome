@@ -1,0 +1,8 @@
+{
+  "id": "default",
+  "name": "Default Clone Voice",
+  "language": "en",
+  "prompt_audio": "prompt.wav",
+  "prompt_text": "Underneath the courtyard is a large underground exhibition room which connects the two buildings.",
+  "style_hint": "Replace prompt.wav with a clean 3–10s reference clip of the target voice, matching prompt_text."
+}

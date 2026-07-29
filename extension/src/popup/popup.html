@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Listen</title>
+    <link rel="stylesheet" href="./popup.css" />
+  </head>
+  <body>
+    <header>
+      <div class="brand">Listen</div>
+      <div id="engine" class="pill">…</div>
+    </header>
+    <p id="status" class="status">Checking TTS server…</p>
+    <div class="actions">
+      <button id="play-page" class="primary">Play page</button>
+      <button id="play-selection">Selection</button>
+      <button id="toggle">Play / Pause</button>
+    </div>
+    <label class="field">
+      <span>Engine</span>
+      <select id="engine-select"></select>
+    </label>
+    <label class="field">
+      <span>Speed</span>
+      <select id="speed"></select>
+    </label>
+    <label class="field">
+      <span>Voice</span>
+      <select id="voice"></select>
+    </label>
+    <div class="footer">
+      <a href="#" id="options">Settings</a>
+      <a href="#" id="library">Library</a>
+    </div>
+    <script type="module" src="./popup.ts"></script>
+  </body>
+</html>

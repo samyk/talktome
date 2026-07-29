@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Listen Settings</title>
+    <link rel="stylesheet" href="./options.css" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Listen</h1>
+        <p>Speechify-style reader — Edge neural TTS, Kokoro, Qwen3, MOSS, OmniVoice, EditX</p>
+      </header>
+
+      <section>
+        <h2>Server</h2>
+        <label>
+          Local TTS URL
+          <input id="serverUrl" type="url" placeholder="http://127.0.0.1:8765" />
+        </label>
+        <button id="test-server" type="button">Test connection</button>
+        <p id="server-status" class="hint"></p>
+      </section>
+
+      <section>
+        <h2>Engine & voice</h2>
+        <label>
+          Preferred engine
+          <select id="engine">
+            <option value="auto">Auto (Edge online → local fallback)</option>
+            <option value="edge">Microsoft Edge (online neural)</option>
+            <option value="kokoro">Kokoro (local)</option>
+            <option value="qwen3">Qwen3-TTS</option>
+            <option value="moss">MOSS-TTS</option>
+            <option value="omnivoice">OmniVoice</option>
+            <option value="editx">Step-Audio-EditX</option>
+            <option value="system">System TTS</option>
+          </select>
+        </label>
+        <label>
+          Voice
+          <select id="voiceId"></select>
+        </label>
+        <label>
+          Emotion (EditX)
+          <select id="emotion">
+            <option value="">None</option>
+          </select>
+        </label>
+        <label>
+          Speaking style (EditX)
+          <select id="style">
+            <option value="">None</option>
+          </select>
+        </label>
+        <p class="hint">
+          Highest quality online: Edge <code>en-US-AriaNeural</code>. Best local without CUDA: Kokoro.
+          Qwen3 / MOSS / OmniVoice need GPU installs or a remote OpenAI-compatible URL.
+        </p>
+      </section>
+
+      <section>
+        <h2>Playback</h2>
+        <label>
+          Default speed
+          <select id="speed"></select>
+        </label>
+        <label>
+          Highlight mode
+          <select id="highlightMode">
+            <option value="word">Word</option>
+            <option value="sentence">Sentence</option>
+            <option value="paragraph">Paragraph</option>
+          </select>
+        </label>
+        <label class="check">
+          <input id="autoScroll" type="checkbox" />
+          Auto-scroll to spoken text
+        </label>
+        <label class="check">
+          <input id="skipNavChrome" type="checkbox" />
+          Skip nav / footer chrome when extracting
+        </label>
+        <label>
+          Player position
+          <select id="playerDock">
+            <option value="bottom">Bottom</option>
+            <option value="top">Top</option>
+            <option value="floating">Floating (corner)</option>
+          </select>
+        </label>
+      </section>
+
+      <section>
+        <h2>Library</h2>
+        <div id="library" class="library"></div>
+        <button id="clear-library" type="button" class="ghost">Clear library</button>
+      </section>
+
+      <section>
+        <h2>Shortcuts</h2>
+        <ul class="shortcuts">
+          <li><kbd>⌥⇧L</kbd> Play page</li>
+          <li><kbd>⌥⇧S</kbd> Play selection</li>
+          <li><kbd>⌥⇧P</kbd> Play / pause</li>
+        </ul>
+        <p class="hint">Customize in <code>chrome://extensions/shortcuts</code></p>
+      </section>
+
+      <button id="save" class="primary" type="button">Save</button>
+      <p id="saved" class="hint"></p>
+    </main>
+    <script type="module" src="./options.ts"></script>
+  </body>
+</html>

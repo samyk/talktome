@@ -1,0 +1,14 @@
+{
+  "name": "listen-tts",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "assets": "python3 scripts/generate-assets.py",
+    "ext:install": "npm --prefix extension install",
+    "ext:dev": "npm --prefix extension run dev",
+    "ext:build": "npm --prefix extension run build",
+    "server:install": "cd server && python3 -m pip install -e .",
+    "server": "cd server && python3 -m uvicorn app.main:app --host 127.0.0.1 --port 8765",
+    "menubar:build": "./scripts/build-menubar-app.sh"
+  }
+}
