@@ -34,9 +34,9 @@ npm run menubar:build
 
 Requires Xcode Command Line Tools (`xcode-select --install`) on the build machine only. Produces `dist-share/TalkToMe.app` and `dist-share/Install-TalkToMe.pkg` → installs to **`/Applications/TalkToMe.app`**. See [SHARE.md](SHARE.md).
 
-Signed with **Developer ID Application/Installer: Samy Kamkar (729MKH4M8C)** and notarized via `listen-notary`. The pkg sets `BundleIsRelocatable=false` so Installer always targets `/Applications` (relocatable packages previously tried to “upgrade” the build tree under Documents and TCC blocked the write — receipt said installed, nothing in `/Applications`).
+Signed with **Developer ID Application/Installer: Samy Kamkar (729MKH4M8C)** and notarized via `listen-notary`. The pkg sets `BundleIsRelocatable=false` so Installer always targets `/Applications`.
 
-Menu bar app: `macos-app/ListenTray/main.swift`. Data: `~/Library/Application Support/TalkToMe/`. **Open at Login** is enabled by the installer; toggle from the menu to turn off.
+Menu bar app: `macos-app/ListenTray/main.swift`. Icons live in `macos-app/ListenTray/Assets/` (`AppIcon.icns` for Finder/Dock/Cmd-Tab, `MenuBarIcon*.png` for the status item). Data: `~/Library/Application Support/TalkToMe/`. **Open at Login** is offered once on first launch (never auto-enabled by the installer); toggle anytime from the menu.
 
 ### Development: run the server directly (Kokoro neural — good quality on Mac, no CUDA)
 

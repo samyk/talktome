@@ -14,7 +14,7 @@ SWIFT_SRC="${ROOT}/macos-app/ListenTray/main.swift"
 BIN_NAME="TalkToMe"
 DEPLOY_TARGET="12.0"
 BUNDLE_ID="com.talktome.app"
-VERSION="0.0.2"
+VERSION="0.0.3"
 TEAM_ID="${LISTEN_TEAM_ID:-729MKH4M8C}"
 NOTARY_PROFILE="${LISTEN_NOTARY_PROFILE:-listen-notary}"
 PKG_OUT="${OUT}/Install-TalkToMe.pkg"
@@ -42,6 +42,11 @@ echo "▸ Building extension…"
 cd "${ROOT}/extension"
 [ -d node_modules ] || npm install
 python3 "${ROOT}/scripts/generate-assets.py"
+# Prefer the TalkToMe speaker art over the placeholder generator icons.
+for sz in 16 32 48 128; do
+  sips -z "$sz" "$sz" "${ROOT}/macos-app/ListenTray/Assets/AppIcon.png" \
+    --out "${ROOT}/extension/src/assets/icons/icon${sz}.png" >/dev/null
+done
 npm run build
 
 echo "▸ Assembling bundle…"
@@ -59,7 +64,11 @@ rsync -a \
   --exclude '._*' --exclude '.DS_Store' \
   "${ROOT}/server/" "${RES}/server/"
 cp -R "${ROOT}/extension/dist/." "${RES}/extension/"
-cp "${ROOT}/extension/src/assets/icons/icon128.png" "${RES}/app.icns"
+# App / Dock / Cmd-Tab icon + menu bar glyph
+cp "${ROOT}/macos-app/ListenTray/Assets/AppIcon.icns" "${RES}/AppIcon.icns"
+cp "${ROOT}/macos-app/ListenTray/Assets/AppIcon.png" "${RES}/AppIcon.png"
+cp "${ROOT}/macos-app/ListenTray/Assets/MenuBarIcon.png" "${RES}/MenuBarIcon.png"
+cp "${ROOT}/macos-app/ListenTray/Assets/MenuBarIcon@2x.png" "${RES}/MenuBarIcon@2x.png"
 find "${RES}" \( -name '._*' -o -name '.DS_Store' \) -delete 2>/dev/null || true
 
 python3 - "${ROOT}/server/pyproject.toml" "${RES}/requirements.txt" << 'PY'
@@ -96,11 +105,11 @@ cat > "${CONTENTS}/Info.plist" << PLIST
   <key>CFBundleName</key><string>${APP_NAME}</string>
   <key>CFBundleDisplayName</key><string>${APP_NAME}</string>
   <key>CFBundleIdentifier</key><string>${BUNDLE_ID}</string>
-  <key>CFBundleVersion</key><string>2</string>
+  <key>CFBundleVersion</key><string>3</string>
   <key>CFBundleShortVersionString</key><string>${VERSION}</string>
   <key>CFBundleExecutable</key><string>${BIN_NAME}</string>
   <key>CFBundlePackageType</key><string>APPL</string>
-  <key>CFBundleIconFile</key><string>app.icns</string>
+  <key>CFBundleIconFile</key><string>AppIcon</string>
   <key>LSUIElement</key><true/>
   <key>NSHighResolutionCapable</key><true/>
   <key>LSMinimumSystemVersion</key><string>${DEPLOY_TARGET}</string>
@@ -163,7 +172,6 @@ cat > "${PKG_SCRIPTS}/postinstall" << POST
 #!/bin/bash
 set -euo pipefail
 APP="/Applications/${APP_NAME}.app"
-LABEL="${BUNDLE_ID}"
 xattr -dr com.apple.quarantine "\${APP}" 2>/dev/null || true
 rm -rf "/Applications/Listen TTS.app" 2>/dev/null || true
 
@@ -173,32 +181,11 @@ uid="\$(id -u "\${user}")"
 home="\$(dscl . -read "/Users/\${user}" NFSHomeDirectory 2>/dev/null | awk '{print \$2}')"
 [ -n "\${home}" ] || home="/Users/\${user}"
 
-agents="\${home}/Library/LaunchAgents"
-mkdir -p "\${agents}"
-chown "\${user}:staff" "\${agents}"
-rm -f "\${agents}/com.listen.tts.tray.plist"
+# Do not auto-enable Open at Login — the app asks on first launch.
+# Clear only the legacy Listen TTS agent from earlier builds.
+rm -f "\${home}/Library/LaunchAgents/com.listen.tts.tray.plist" 2>/dev/null || true
 sudo -u "\${user}" launchctl bootout "gui/\${uid}/com.listen.tts.tray" 2>/dev/null || true
 
-cat > "\${agents}/\${LABEL}.plist" << PLIST
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-  <key>Label</key><string>\${LABEL}</string>
-  <key>ProgramArguments</key>
-  <array>
-    <string>/usr/bin/open</string>
-    <string>-a</string>
-    <string>\${APP}</string>
-  </array>
-  <key>RunAtLoad</key><true/>
-</dict>
-</plist>
-PLIST
-chown "\${user}:staff" "\${agents}/\${LABEL}.plist"
-sudo -u "\${user}" launchctl bootout "gui/\${uid}/\${LABEL}" 2>/dev/null || true
-sudo -u "\${user}" launchctl bootstrap "gui/\${uid}" "\${agents}/\${LABEL}.plist" 2>/dev/null \\
-  || sudo -u "\${user}" launchctl load "\${agents}/\${LABEL}.plist" 2>/dev/null || true
 sudo -u "\${user}" open "\${APP}" 2>/dev/null || true
 exit 0
 POST

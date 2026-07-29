@@ -5,15 +5,16 @@ Send: **`Install-TalkToMe.pkg`**
 ## Install
 
 1. Double-click **Install-TalkToMe.pkg** → Install
-2. Lands in **`/Applications/TalkToMe.app`**, turns on **Open at Login**, and launches
-3. Look for the **speaker icon** in the menu bar (no Dock icon)
-4. First launch installs Python deps (~1 min): status `installing…` → `running`
-5. Menu bar → **Install Browser Extension…** → Chrome `chrome://extensions` → Developer mode → Load unpacked → pick the folder it reveals
-6. Open a page → extension → **Play page**
+2. Lands in **`/Applications/TalkToMe.app`** and launches
+3. On first run, choose whether to **Open at Login** (optional — you can change later)
+4. Look for the **speaker** icon in the menu bar (no Dock icon by default)
+5. First launch also installs Python deps (~1 min): status `TalkToMe v…: installing…` → `running`
+6. Menu bar → **Install Browser Extension…** → Chrome `chrome://extensions` → Developer mode → Load unpacked → pick the folder it reveals
+7. Open a page → extension → **Play page**
 
-## Turn off startup
+## Open at Login
 
-Menu bar speaker → uncheck **Open at Login**. Check it again to re-enable.
+First launch asks. After that: menu bar → **Open at Login** (checkmark = on).
 
 ## Requirements
 
@@ -32,6 +33,6 @@ Menu bar speaker → uncheck **Open at Login**. Check it again to re-enable.
 
 ```text
 /Applications/TalkToMe.app
-~/Library/LaunchAgents/com.talktome.app.plist
+~/Library/LaunchAgents/com.talktome.app.plist   # only if Open at Login is on
 ~/Library/Application Support/TalkToMe/
 ```

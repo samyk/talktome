@@ -10,12 +10,30 @@ let appName = "TalkToMe"
 let bundleId = "com.talktome.app"
 /// Keep in sync with CFBundleShortVersionString in the build script.
 let appVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
-    ?? "0.0.2"
+    ?? "0.0.3"
 let host = "127.0.0.1"
 let port = 8765
 
 func statusTitle(_ state: String) -> String {
     "\(appName) v\(appVersion): \(state)"
+}
+
+func loadBundledImage(name: String, size: NSSize? = nil) -> NSImage? {
+    let candidates: [URL?] = [
+        Bundle.main.url(forResource: name, withExtension: "png"),
+        Bundle.main.resourceURL?.appendingPathComponent("\(name).png"),
+        Bundle.main.resourceURL?.appendingPathComponent("Assets/\(name).png"),
+    ]
+    for case let url? in candidates {
+        if let image = NSImage(contentsOf: url) {
+            if let size {
+                image.size = size
+            }
+            image.isTemplate = false
+            return image
+        }
+    }
+    return nil
 }
 
 let appSupport = FileManager.default.homeDirectoryForCurrentUser
@@ -27,8 +45,7 @@ let serverLog = logDir.appendingPathComponent("server.log")
 let installLog = logDir.appendingPathComponent("install.log")
 let stampFile = appSupport.appendingPathComponent("install.stamp")
 let pidFile = appSupport.appendingPathComponent("server.pid")
-// Remember an explicit user choice so we don't re-enable Open at Login after
-// they turn it off (postinstall enables it once on first install).
+// Remember an explicit user choice so we don't re-prompt after they decide.
 let loginPrefFile = appSupport.appendingPathComponent("open-at-login.pref")
 
 let resources = Bundle.main.resourceURL!
@@ -363,7 +380,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        if let image = NSImage(
+        if let image = loadBundledImage(name: "MenuBarIcon", size: NSSize(width: 18, height: 18))
+            ?? loadBundledImage(name: "AppIcon", size: NSSize(width: 18, height: 18)) {
+            statusItem.button?.image = image
+            statusItem.button?.imagePosition = .imageOnly
+        } else if let image = NSImage(
             systemSymbolName: "speaker.wave.2.fill", accessibilityDescription: appName) {
             image.isTemplate = true
             statusItem.button?.image = image
@@ -401,10 +422,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         add(menu, "Quit \(appName)", #selector(quitAction), key: "q")
         statusItem.menu = menu
 
+        promptOpenAtLoginIfNeeded()
+
         timer = Timer.scheduledTimer(withTimeInterval: 2.5, repeats: true) { [weak self] _ in
             self?.poll()
         }
         bringUp(force: false)
+    }
+
+    /// First launch only: ask whether to start at login. Never auto-enables.
+    private func promptOpenAtLoginIfNeeded() {
+        if FileManager.default.fileExists(atPath: loginPrefFile.path) {
+            openAtLoginItem.state = isOpenAtLoginEnabled() ? .on : .off
+            return
+        }
+        let alert = NSAlert()
+        alert.messageText = "Open \(appName) at login?"
+        alert.informativeText =
+            "Start \(appName) automatically when you log in so the menu bar icon is ready. "
+            + "You can change this anytime from the menu."
+        alert.addButton(withTitle: "Open at Login")
+        alert.addButton(withTitle: "Not Now")
+        let enable = alert.runModal() == .alertFirstButtonReturn
+        _ = setOpenAtLogin(enable)
+        openAtLoginItem.state = enable ? .on : .off
     }
 
     func applicationWillTerminate(_ notification: Notification) {
