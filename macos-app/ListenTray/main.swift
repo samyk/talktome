@@ -10,7 +10,7 @@ let appName = "TalkToMe"
 let bundleId = "com.talktome.app"
 /// Keep in sync with CFBundleShortVersionString in the build script.
 let appVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
-    ?? "0.0.3"
+    ?? "0.0.4"
 let host = "127.0.0.1"
 let port = 8765
 
@@ -18,7 +18,11 @@ func statusTitle(_ state: String) -> String {
     "\(appName) v\(appVersion): \(state)"
 }
 
-func loadBundledImage(name: String, size: NSSize? = nil) -> NSImage? {
+func loadBundledImage(
+    name: String,
+    size: NSSize? = nil,
+    template: Bool = false
+) -> NSImage? {
     let candidates: [URL?] = [
         Bundle.main.url(forResource: name, withExtension: "png"),
         Bundle.main.resourceURL?.appendingPathComponent("\(name).png"),
@@ -29,7 +33,7 @@ func loadBundledImage(name: String, size: NSSize? = nil) -> NSImage? {
             if let size {
                 image.size = size
             }
-            image.isTemplate = false
+            image.isTemplate = template
             return image
         }
     }
@@ -380,7 +384,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        if let image = loadBundledImage(name: "MenuBarIcon", size: NSSize(width: 18, height: 18))
+        if let image = loadBundledImage(
+            name: "MenuBarIcon",
+            size: NSSize(width: 18, height: 18),
+            template: true
+        )
             ?? loadBundledImage(name: "AppIcon", size: NSSize(width: 18, height: 18)) {
             statusItem.button?.image = image
             statusItem.button?.imagePosition = .imageOnly

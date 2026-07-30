@@ -36,7 +36,7 @@ Requires Xcode Command Line Tools (`xcode-select --install`) on the build machin
 
 Signed with **Developer ID Application/Installer: Samy Kamkar (729MKH4M8C)** and notarized via `listen-notary`. The pkg sets `BundleIsRelocatable=false` so Installer always targets `/Applications`.
 
-Menu bar app: `macos-app/ListenTray/main.swift`. Icons live in `macos-app/ListenTray/Assets/` (`AppIcon.icns` for Finder/Dock/Cmd-Tab, `MenuBarIcon*.png` for the status item). Data: `~/Library/Application Support/TalkToMe/`. **Open at Login** is offered once on first launch (never auto-enabled by the installer); toggle anytime from the menu.
+Menu bar app: `macos-app/ListenTray/main.swift`. `Assets/IconSource.png` is the canonical full-resolution transparent speaker art. It generates `AppIcon.icns` for Finder/Dock/Cmd-Tab, the browser toolbar sizes, and monochrome template `MenuBarIcon*.png` masks that automatically follow the light/dark menu bar. Data: `~/Library/Application Support/TalkToMe/`. **Open at Login** is offered once on first launch (never auto-enabled by the installer); toggle anytime from the menu.
 
 ### Development: run the server directly (Kokoro neural — good quality on Mac, no CUDA)
 
