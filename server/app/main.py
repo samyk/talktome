@@ -112,13 +112,29 @@ async def lifespan(_app: FastAPI):
     yield
 
 
-app = FastAPI(title="Listen TTS Server", version=__version__, lifespan=lifespan)
+app = FastAPI(title="TalkToMe TTS Server", version=__version__, lifespan=lifespan)
+
+# Response headers are invisible to a cross-origin caller unless listed here.
+# The content script runs on the page's origin, so without this it cannot read
+# which engine served the audio or how much speed was baked in — and it then
+# re-applies speed on top, playing everything at speed².
+EXPOSED_HEADERS = [
+    "X-TalkToMe-Engine",
+    "X-TalkToMe-Format",
+    "X-TalkToMe-Sample-Rate",
+    "X-TalkToMe-Speed",
+    "X-Listen-Engine",
+    "X-Listen-Format",
+    "X-Listen-Sample-Rate",
+]
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=EXPOSED_HEADERS,
 )
 
 
@@ -264,11 +280,17 @@ def tts(req: TTSRequest) -> Response:
         raise HTTPException(status_code=500, detail=str(last_err) if last_err else "TTS failed")
 
     media = "audio/mpeg" if result.format == "mp3" else "audio/wav"
+    engine_name = used or result.engine
     return Response(
         content=result.audio,
         media_type=media,
         headers={
-            "X-Listen-Engine": used or result.engine,
+            "X-TalkToMe-Engine": engine_name,
+            "X-TalkToMe-Sample-Rate": str(result.sample_rate),
+            "X-TalkToMe-Format": result.format,
+            "X-TalkToMe-Speed": f"{result.speed_applied:g}",
+            # Legacy names — an extension from an older build still reads these.
+            "X-Listen-Engine": engine_name,
             "X-Listen-Sample-Rate": str(result.sample_rate),
             "X-Listen-Format": result.format,
             "Cache-Control": "no-store",

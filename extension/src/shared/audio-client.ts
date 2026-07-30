@@ -37,6 +37,17 @@ export interface EnginesPayload {
   default_voice_id: string;
 }
 
+/** Engines that bake the speed multiplier into the audio they return. */
+const SERVER_SIDE_SPEED_ENGINES = new Set(["edge", "kokoro"]);
+
+export interface SynthesisResult {
+  buffer: ArrayBuffer;
+  engine: string;
+  format: string;
+  /** Speed already present in the audio; residual goes to playbackRate. */
+  speedApplied: number;
+}
+
 export class TtsClient {
   constructor(private serverUrl: string) {}
 
@@ -71,7 +82,7 @@ export class TtsClient {
       style?: string | null;
       speed?: number;
     } = {},
-  ): Promise<{ buffer: ArrayBuffer; engine: string; format: string }> {
+  ): Promise<SynthesisResult> {
     const res = await fetch(`${this.serverUrl}/v1/tts`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -95,10 +106,32 @@ export class TtsClient {
       }
       throw new Error(typeof detail === "string" ? detail : JSON.stringify(detail));
     }
+    const header = (name: string) =>
+      res.headers.get(`X-TalkToMe-${name}`) ?? res.headers.get(`X-Listen-${name}`);
+
+    const engineHeader = header("Engine");
+    const engine = engineHeader || "unknown";
+    const requested = opts.speed ?? 1;
+    const reported = res.headers.get("X-TalkToMe-Speed");
+
+    // Guessing wrong here is audible, so bias toward "already applied": that
+    // caps playback at the requested speed, where the opposite mistake
+    // multiplies it. Headers go missing entirely when the server omits
+    // Access-Control-Expose-Headers.
+    let speedApplied: number;
+    if (reported !== null) {
+      speedApplied = Number(reported) || 1;
+    } else if (engineHeader === null || SERVER_SIDE_SPEED_ENGINES.has(engine)) {
+      speedApplied = requested;
+    } else {
+      speedApplied = 1;
+    }
+
     return {
       buffer: await res.arrayBuffer(),
-      engine: res.headers.get("X-Listen-Engine") || "unknown",
-      format: res.headers.get("X-Listen-Format") || "wav",
+      engine,
+      format: header("Format") || "wav",
+      speedApplied,
     };
   }
 }

@@ -1,0 +1,12 @@
+---
+description: Keep README.md current with product changes
+alwaysApply: true
+---
+
+# README must stay current
+
+Whenever you change product name, version, install/share flow, engines, packaging, extension metadata, menu-bar behavior, or user-facing features, update `README.md` in the same change.
+
+Also update `SHARE.md` when the friend-install path changes (pkg name, Open at Login, extension install steps, paths).
+
+Do not leave docs describing Listen TTS, Speechify, or outdated Load-unpacked steps if the app now automates part of that flow.

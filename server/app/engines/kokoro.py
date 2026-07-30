@@ -136,7 +136,8 @@ class KokoroEngine(TTSEngine):
         elif voice.startswith("ef_") or voice.startswith("em_"):
             lang = "en-us"
 
-        # Prefer client playbackRate for scrubbing; still honor speed if provided
+        # Baked in here rather than via playbackRate: resampling artifacts get
+        # ugly past ~2x, and the model keeps prosody natural instead.
         kspeed = float(speed) if speed else 1.0
         samples, sample_rate = self._kokoro.create(text, voice=voice, speed=kspeed, lang=lang)
         audio = np.asarray(samples, dtype=np.float32)
@@ -147,4 +148,5 @@ class KokoroEngine(TTSEngine):
             sample_rate=int(sample_rate),
             format="wav",
             engine="kokoro",
+            speed_applied=kspeed,
         )

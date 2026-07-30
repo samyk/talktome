@@ -1,5 +1,6 @@
+import { ensureCatalog, readCatalog } from "../shared/catalog";
 import { getSettings, saveSettings } from "../shared/settings";
-import type { ExtensionMessage, LibraryItem, Settings } from "../shared/types";
+import type { EngineId, ExtensionMessage, LibraryItem, Settings } from "../shared/types";
 import { clearListenMarks, extractDocument, extractSelection } from "./extractor";
 import { PlaybackController, PlayerUI } from "./player";
 
@@ -35,6 +36,16 @@ async function ensurePlayer() {
       void saveSettings({ speed });
       settings.speed = speed;
     },
+    onEngine: (engine: EngineId) => {
+      controller?.setEngine(engine);
+      void saveSettings({ engine });
+      settings.engine = engine;
+    },
+    onVoice: (voiceId: string) => {
+      controller?.setVoice(voiceId);
+      void saveSettings({ voiceId });
+      settings.voiceId = voiceId;
+    },
     onSection: (i) => void controller?.seekSection(i),
     onToggleSections: () => undefined,
     onSave: () => void saveCurrentToLibrary(),
@@ -44,7 +55,20 @@ async function ensurePlayer() {
     void controller?.seekRatio(e.detail);
   }) as EventListener);
 
+  void populatePlayerCatalog();
+
   return { ui, controller };
+}
+
+/**
+ * Cached catalog first so the pickers are populated on the first frame, then a
+ * refresh in case voices or engine availability changed.
+ */
+async function populatePlayerCatalog() {
+  const cached = await readCatalog();
+  if (cached && ui) ui.setCatalog(cached, settings);
+  const fresh = await ensureCatalog(settings);
+  if (fresh && fresh !== cached && ui) ui.setCatalog(fresh, settings);
 }
 
 async function playPage(startSentence = 0) {
@@ -149,7 +173,7 @@ function showSelectionChip() {
     selectionChip = document.createElement("button");
     selectionChip.className = "listen-selection-chip";
     selectionChip.type = "button";
-    selectionChip.textContent = "Listen";
+    selectionChip.textContent = "TalkToMe";
     selectionChip.setAttribute("contenteditable", "false");
     selectionChip.addEventListener("mousedown", (e) => {
       e.preventDefault();

@@ -10,6 +10,10 @@ class SynthResult:
     sample_rate: int
     format: str = "wav"
     engine: str = "unknown"
+    #: Speed multiplier already baked into ``audio``. The client divides its
+    #: target speed by this to get the residual playbackRate, so an engine that
+    #: ignores ``speed`` must leave it at 1.0 or playback ends up squared.
+    speed_applied: float = 1.0
 
 
 class TTSEngine(ABC):

@@ -84,6 +84,8 @@ export interface PlayerSnapshot {
   progress: number;
   error?: string;
   title?: string;
+  /** Engine that served the current sentence, once known. */
+  engine?: string;
 }
 
 export type ExtensionMessage =

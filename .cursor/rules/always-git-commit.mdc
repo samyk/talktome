@@ -1,0 +1,12 @@
+---
+description: Always commit completed work without waiting to be asked
+alwaysApply: true
+---
+
+# Always git commit
+
+After finishing a coherent unit of work the user requested, create a git commit for those changes in the same turn — do not wait for an explicit “commit” ask.
+
+Follow the repo’s normal commit protocol (status/diff/log, stage relevant files, HEREDOC message, no secrets, no Co-authored-by Cursor / Made-with Cursor trailers, no amend unless the usual amend conditions apply, no push unless asked).
+
+Skip only if there is nothing to commit, or the user explicitly said not to commit.

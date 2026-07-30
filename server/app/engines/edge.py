@@ -134,6 +134,7 @@ class EdgeEngine(TTSEngine):
 
         voice = (voice_id or "en-US-AriaNeural").removeprefix("edge:")
         rate = speed_to_edge_rate(speed)
+        applied = float(speed) if speed else 1.0
 
         async def _run() -> bytes:
             import edge_tts
@@ -177,9 +178,11 @@ class EdgeEngine(TTSEngine):
                     raise RuntimeError("no converter")
                 audio_bytes = wav_path.read_bytes()
                 info = sf.info(io.BytesIO(audio_bytes))
-                return SynthResult(audio_bytes, int(info.samplerate), "wav", "edge")
+                return SynthResult(
+                    audio_bytes, int(info.samplerate), "wav", "edge", speed_applied=applied
+                )
             finally:
                 src_path.unlink(missing_ok=True)
                 wav_path.unlink(missing_ok=True)
         except Exception:
-            return SynthResult(mp3, 24000, "mp3", "edge")
+            return SynthResult(mp3, 24000, "mp3", "edge", speed_applied=applied)

@@ -1,4 +1,5 @@
 import { TtsClient } from "../shared/audio-client";
+import { fetchCatalog } from "../shared/catalog";
 import { getSettings } from "../shared/settings";
 import type { ExtensionMessage } from "../shared/types";
 
@@ -12,18 +13,30 @@ async function sendToActiveTab(message: ExtensionMessage) {
   }
 }
 
+/** Populate the voice/engine cache so the first popup open paints instantly. */
+async function warmCatalog() {
+  try {
+    await fetchCatalog(await getSettings());
+  } catch {
+    // Server not up yet; the popup falls back to whatever is cached.
+  }
+}
+
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({
     id: "listen-selection",
-    title: "Listen to selection",
+    title: "TalkToMe: read selection",
     contexts: ["selection"],
   });
   chrome.contextMenus.create({
     id: "listen-page",
-    title: "Listen to page",
+    title: "TalkToMe: read page",
     contexts: ["page"],
   });
+  void warmCatalog();
 });
+
+chrome.runtime.onStartup.addListener(() => void warmCatalog());
 
 chrome.contextMenus.onClicked.addListener((info) => {
   if (info.menuItemId === "listen-selection") void sendToActiveTab({ type: "PLAY_SELECTION" });

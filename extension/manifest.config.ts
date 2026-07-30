@@ -2,13 +2,16 @@ import { defineManifest } from "@crxjs/vite-plugin";
 
 export default defineManifest({
   manifest_version: 3,
-  name: "Listen — Local TTS (Step-Audio-EditX)",
+  name: "TalkToMe",
   description:
-    "Speechify-style website reader powered by local Step-Audio-EditX. Sections, speeds, highlighting, and more.",
-  version: "0.1.0",
+    "Read any webpage aloud with Edge Neural, Kokoro, Qwen3, MOSS, OmniVoice, EditX, or system TTS — sections, speeds, live highlighting.",
+  // Chrome accepts a string; @types/chrome only models { email }.
+  author: "Samy Kamkar" as unknown as { email: string },
+  homepage_url: "https://sa.my",
+  version: "0.0.8",
   action: {
     default_popup: "src/popup/popup.html",
-    default_title: "Listen",
+    default_title: "TalkToMe",
     default_icon: {
       "16": "src/assets/icons/icon16.png",
       "32": "src/assets/icons/icon32.png",
@@ -43,7 +46,7 @@ export default defineManifest({
   commands: {
     "toggle-play": {
       suggested_key: { default: "Alt+Shift+P", mac: "Alt+Shift+P" },
-      description: "Play / pause Listen",
+      description: "Play / pause TalkToMe",
     },
     "read-selection": {
       suggested_key: { default: "Alt+Shift+S", mac: "Alt+Shift+S" },

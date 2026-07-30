@@ -1,23 +1,19 @@
-import { TtsClient } from "../shared/audio-client";
+import {
+  type ServerCatalog,
+  engineOptionLabel,
+  fetchCatalog,
+  isFresh,
+  readCatalog,
+  voicesForEngine,
+} from "../shared/catalog";
 import { SPEED_OPTIONS, getSettings, saveSettings } from "../shared/settings";
-import type { EngineId, ExtensionMessage } from "../shared/types";
+import type { EngineId, ExtensionMessage, Settings } from "../shared/types";
 
 const enginePill = document.getElementById("engine")!;
 const statusEl = document.getElementById("status")!;
 const speedEl = document.getElementById("speed") as HTMLSelectElement;
 const voiceEl = document.getElementById("voice") as HTMLSelectElement;
 const engineEl = document.getElementById("engine-select") as HTMLSelectElement;
-
-const ENGINE_LABELS: Record<string, string> = {
-  auto: "Auto (Edge → local fallback)",
-  edge: "Microsoft Edge (online)",
-  kokoro: "Kokoro (local)",
-  qwen3: "Qwen3-TTS",
-  moss: "MOSS-TTS",
-  omnivoice: "OmniVoice",
-  editx: "Step-Audio-EditX",
-  system: "System TTS",
-};
 
 for (const s of SPEED_OPTIONS) {
   const opt = document.createElement("option");
@@ -32,14 +28,8 @@ async function send(message: ExtensionMessage) {
   await chrome.tabs.sendMessage(tab.id, message);
 }
 
-function fillVoices(
-  voices: { id: string; name: string; engine: string }[],
-  engine: string,
-  selected: string,
-) {
-  const filtered =
-    engine === "auto" ? voices : voices.filter((v) => v.engine === engine || v.id.startsWith(`${engine}:`));
-  const list = filtered.length ? filtered : voices;
+function fillVoices(catalog: ServerCatalog, engine: string, selected: string) {
+  const list = voicesForEngine(catalog.voices.voices, engine);
   voiceEl.innerHTML = "";
   for (const v of list) {
     const opt = document.createElement("option");
@@ -51,59 +41,66 @@ function fillVoices(
   else if (list[0]) voiceEl.value = list[0].id;
 }
 
+function render(catalog: ServerCatalog, settings: Settings, stale: boolean) {
+  enginePill.textContent = catalog.health.engine;
+  enginePill.classList.toggle("bad", !catalog.health.ok);
+  statusEl.textContent = catalog.health.message || `Connected · ${catalog.health.platform}`;
+  statusEl.classList.toggle("stale", stale);
+
+  engineEl.innerHTML = "";
+  const auto = document.createElement("option");
+  auto.value = "auto";
+  auto.textContent = "Auto (best available)";
+  engineEl.appendChild(auto);
+  for (const engine of catalog.engines.engines) {
+    const opt = document.createElement("option");
+    opt.value = engine.id;
+    opt.textContent = engineOptionLabel(engine);
+    opt.disabled = !engine.available && engine.id !== "edge";
+    engineEl.appendChild(opt);
+  }
+  engineEl.value = settings.engine || "auto";
+
+  fillVoices(catalog, engineEl.value, settings.voiceId);
+  speedEl.value = String(settings.speed);
+}
+
 async function init() {
   const settings = await getSettings();
   speedEl.value = String(settings.speed);
 
+  // Paint from cache first — three round trips to the server otherwise leave
+  // the dropdowns empty for about a second every time the popup opens.
+  const cached = await readCatalog();
+  const serverUrl = settings.serverUrl.replace(/\/$/, "");
+  const fresh = isFresh(cached, serverUrl);
+  if (cached) render(cached, settings, !fresh);
+  else statusEl.textContent = "Connecting to TalkToMe…";
+  if (fresh) return;
+
   try {
-    const client = TtsClient.fromSettings(settings);
-    const [health, voices, engines] = await Promise.all([
-      client.health(),
-      client.voices(),
-      client.engines(),
-    ]);
-
-    enginePill.textContent = health.engine;
-    enginePill.classList.toggle("bad", !health.ok);
-    statusEl.textContent = health.message || `Connected · ${health.platform}`;
-
-    engineEl.innerHTML = "";
-    const autoOpt = document.createElement("option");
-    autoOpt.value = "auto";
-    autoOpt.textContent = ENGINE_LABELS.auto;
-    engineEl.appendChild(autoOpt);
-    for (const e of engines.engines) {
-      const opt = document.createElement("option");
-      opt.value = e.id;
-      const online =
-        e.online === false ? " · offline" : e.online === true ? " · online" : e.available ? "" : " · unavailable";
-      opt.textContent = `${e.label}${online}`;
-      opt.disabled = !e.available && e.id !== "edge";
-      engineEl.appendChild(opt);
-    }
-    engineEl.value = settings.engine || "auto";
-
-    // Migrate old robotic / kokoro defaults toward Aria when Edge is up
+    const catalog = await fetchCatalog(settings);
     let voiceId = settings.voiceId;
-    const edgeOnline = engines.engines.find((e) => e.id === "edge")?.online;
+    const edgeOnline = catalog.engines.engines.find((e) => e.id === "edge")?.online;
     if (
       !voiceId ||
       voiceId === "system:Albert" ||
       voiceId === "default" ||
       (edgeOnline && voiceId.startsWith("kokoro:") && settings.engine === "auto")
     ) {
-      voiceId = voices.default_voice_id || "edge:en-US-AriaNeural";
+      voiceId = catalog.voices.default_voice_id || "edge:en-US-AriaNeural";
       await saveSettings({ voiceId, engine: settings.engine || "auto" });
     }
-
-    fillVoices(voices.voices, engineEl.value, voiceId);
+    render(catalog, { ...settings, voiceId }, false);
   } catch (err) {
-    enginePill.textContent = "offline";
-    enginePill.classList.add("bad");
+    if (!cached) {
+      enginePill.textContent = "offline";
+      enginePill.classList.add("bad");
+    }
     statusEl.textContent =
       err instanceof Error
-        ? `${err.message}. Start server: cd server && uvicorn app.main:app --port 8765`
-        : "Server offline";
+        ? `${err.message}. Open the TalkToMe menu bar app and try again.`
+        : "TalkToMe is offline";
   }
 }
 
@@ -120,12 +117,16 @@ speedEl.addEventListener("change", async () => {
 
 engineEl.addEventListener("change", async () => {
   const engine = engineEl.value as EngineId;
-  const client = TtsClient.fromSettings(await getSettings());
-  const voices = await client.voices();
-  fillVoices(voices.voices, engine, voiceEl.value);
-  // Prefer Aria when switching to edge/auto
-  if ((engine === "edge" || engine === "auto") && voices.voices.some((v) => v.id === "edge:en-US-AriaNeural")) {
-    voiceEl.value = "edge:en-US-AriaNeural";
+  const catalog = await readCatalog();
+  if (catalog) {
+    fillVoices(catalog, engine, voiceEl.value);
+    // Aria is the best default when Edge is in play.
+    if (
+      (engine === "edge" || engine === "auto") &&
+      catalog.voices.voices.some((v) => v.id === "edge:en-US-AriaNeural")
+    ) {
+      voiceEl.value = "edge:en-US-AriaNeural";
+    }
   }
   const settings = await saveSettings({ engine, voiceId: voiceEl.value });
   await send({ type: "SETTINGS_UPDATED", settings });

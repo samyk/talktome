@@ -10,7 +10,7 @@ let appName = "TalkToMe"
 let bundleId = "com.talktome.app"
 /// Keep in sync with CFBundleShortVersionString in the build script.
 let appVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
-    ?? "0.0.4"
+    ?? "0.0.8"
 let host = "127.0.0.1"
 let port = 8765
 
@@ -523,14 +523,69 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func installExtension() {
         let extensionDir = resources.appendingPathComponent("extension")
+        guard FileManager.default.fileExists(atPath: extensionDir.path) else {
+            alert(
+                "Extension folder missing from this install.\n\n"
+                    + "Reinstall TalkToMe from Install-TalkToMe.pkg, then try again.")
+            return
+        }
+
+        // Path on the clipboard so Load unpacked is ⌘V → Enter.
+        let pb = NSPasteboard.general
+        pb.clearContents()
+        pb.setString(extensionDir.path, forType: .string)
+
         NSWorkspace.shared.selectFile(
             extensionDir.path, inFileViewerRootedAtPath: resources.path)
-        alert(
-            "Chrome will ask for a folder.\n\n"
-                + "1. Go to chrome://extensions\n"
-                + "2. Turn on Developer mode\n"
-                + "3. Click \"Load unpacked\"\n"
-                + "4. Choose the \"extension\" folder now open in Finder")
+
+        let browser = openChromiumExtensionsPage()
+        let browserLine =
+            browser.map { "Opened \($0)'s extensions page." }
+            ?? "Open chrome://extensions (or edge:// / brave://) yourself."
+
+        let panel = NSAlert()
+        panel.messageText = "Install the TalkToMe extension"
+        panel.informativeText =
+            """
+            \(browserLine)
+            Extension path is on your clipboard.
+
+            1. Turn on Developer mode (top right)
+            2. Click Load unpacked
+            3. Press ⌘V, then Enter  — or pick the highlighted “extension” folder in Finder
+
+            Works in Chrome, Edge, Brave, and Arc.
+            """
+        panel.addButton(withTitle: "OK")
+        panel.runModal()
+    }
+
+    /// Opens the extensions management page in the first Chromium browser we find.
+    @discardableResult
+    private func openChromiumExtensionsPage() -> String? {
+        // bundle id → (display name, extensions URL)
+        let candidates: [(String, String, String)] = [
+            ("com.google.Chrome", "Chrome", "chrome://extensions"),
+            ("com.google.Chrome.canary", "Chrome Canary", "chrome://extensions"),
+            ("com.microsoft.edgemac", "Edge", "edge://extensions"),
+            ("com.brave.Browser", "Brave", "brave://extensions"),
+            ("company.thebrowser.Browser", "Arc", "chrome://extensions"),
+            ("com.google.Chromium", "Chromium", "chrome://extensions"),
+        ]
+        for (bundleId, name, page) in candidates {
+            guard let appURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleId),
+                let pageURL = URL(string: page)
+            else { continue }
+            let config = NSWorkspace.OpenConfiguration()
+            NSWorkspace.shared.open([pageURL], withApplicationAt: appURL, configuration: config)
+            return name
+        }
+        // Last resort: ask LaunchServices to resolve chrome://
+        if let pageURL = URL(string: "chrome://extensions") {
+            NSWorkspace.shared.open(pageURL)
+            return "Chrome"
+        }
+        return nil
     }
 
     @objc private func openHealth() {

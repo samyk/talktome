@@ -1,6 +1,13 @@
-import { TtsClient } from "../shared/audio-client";
+import { TtsClient, type VoiceInfo } from "../shared/audio-client";
+import { type ServerCatalog, engineOptionLabel, voicesForEngine } from "../shared/catalog";
 import { SPEED_OPTIONS } from "../shared/settings";
-import type { DocumentModel, PlayerSnapshot, PlaybackState, Settings } from "../shared/types";
+import type {
+  DocumentModel,
+  EngineId,
+  PlayerSnapshot,
+  PlaybackState,
+  Settings,
+} from "../shared/types";
 import { highlightSentence } from "./extractor";
 
 type Handlers = {
@@ -10,6 +17,8 @@ type Handlers = {
   onPrevSection: () => void;
   onNextSection: () => void;
   onSpeed: (speed: number) => void;
+  onEngine: (engine: EngineId) => void;
+  onVoice: (voiceId: string) => void;
   onSection: (sectionIndex: number) => void;
   onToggleSections: () => void;
   onSave: () => void;
@@ -22,33 +31,51 @@ export class PlayerUI {
   private statusEl!: HTMLElement;
   private progressEl!: HTMLInputElement;
   private playBtn!: HTMLButtonElement;
+  private chaptersBtn!: HTMLButtonElement;
+  private sectionNavBtns!: HTMLButtonElement[];
   private sectionsEl!: HTMLDivElement;
   private speedEl!: HTMLSelectElement;
+  private engineEl!: HTMLSelectElement;
+  private voiceEl!: HTMLSelectElement;
   private sectionsOpen = false;
+  private catalogVoices: VoiceInfo[] = [];
 
   constructor(private handlers: Handlers) {
     this.root = document.createElement("div");
     this.root.id = "listen-root";
     this.root.innerHTML = `
-      <div class="listen-player" role="region" aria-label="Listen player">
+      <div class="listen-player" role="region" aria-label="TalkToMe player">
         <div class="listen-row">
-          <div class="listen-title">Listen</div>
+          <div class="listen-title">TalkToMe</div>
           <div class="listen-meta">—</div>
-          <button class="listen-btn" data-act="sections" title="Sections">§</button>
+          <button class="listen-btn" data-act="sections" title="Chapters" hidden>☰</button>
           <button class="listen-btn" data-act="save" title="Save to library">⤓</button>
           <button class="listen-btn danger" data-act="close" title="Close">✕</button>
         </div>
         <input class="listen-progress" type="range" min="0" max="1000" value="0" />
         <div class="listen-row">
-          <button class="listen-btn" data-act="prev-sec" title="Previous section">⟸</button>
+          <button class="listen-btn" data-act="prev-sec" title="Previous chapter" hidden>⟸</button>
           <button class="listen-btn" data-act="back" title="Back 15s">−15</button>
           <button class="listen-btn primary" data-act="play" title="Play/Pause">▶</button>
           <button class="listen-btn" data-act="fwd" title="Forward 15s">+15</button>
-          <button class="listen-btn" data-act="next-sec" title="Next section">⟹</button>
-          <select class="listen-speed" title="Speed"></select>
+          <button class="listen-btn" data-act="next-sec" title="Next chapter" hidden>⟹</button>
+          <div class="listen-status">Ready</div>
         </div>
-        <div class="listen-status">Ready</div>
         <div class="listen-sections"></div>
+        <div class="listen-controls">
+          <label class="listen-field">
+            <span>Engine</span>
+            <select class="listen-select listen-engine" title="Engine"></select>
+          </label>
+          <label class="listen-field">
+            <span>Voice</span>
+            <select class="listen-select listen-voice" title="Voice"></select>
+          </label>
+          <label class="listen-field">
+            <span>Speed</span>
+            <select class="listen-select listen-speed" title="Speed"></select>
+          </label>
+        </div>
       </div>
     `;
     document.documentElement.appendChild(this.root);
@@ -58,8 +85,15 @@ export class PlayerUI {
     this.statusEl = this.root.querySelector(".listen-status")!;
     this.progressEl = this.root.querySelector(".listen-progress")!;
     this.playBtn = this.root.querySelector('[data-act="play"]')!;
+    this.chaptersBtn = this.root.querySelector('[data-act="sections"]')!;
+    this.sectionNavBtns = [
+      this.root.querySelector('[data-act="prev-sec"]')!,
+      this.root.querySelector('[data-act="next-sec"]')!,
+    ];
     this.sectionsEl = this.root.querySelector(".listen-sections")!;
     this.speedEl = this.root.querySelector(".listen-speed")!;
+    this.engineEl = this.root.querySelector(".listen-engine")!;
+    this.voiceEl = this.root.querySelector(".listen-voice")!;
 
     for (const s of SPEED_OPTIONS) {
       const opt = document.createElement("option");
@@ -80,6 +114,7 @@ export class PlayerUI {
       if (act === "sections") {
         this.sectionsOpen = !this.sectionsOpen;
         this.sectionsEl.classList.toggle("open", this.sectionsOpen);
+        this.chaptersBtn.classList.toggle("active", this.sectionsOpen);
         this.handlers.onToggleSections();
       }
       if (act === "save") this.handlers.onSave();
@@ -88,6 +123,17 @@ export class PlayerUI {
 
     this.speedEl.addEventListener("change", () => {
       this.handlers.onSpeed(Number(this.speedEl.value));
+    });
+
+    this.engineEl.addEventListener("change", () => {
+      const engine = this.engineEl.value as EngineId;
+      this.fillVoices(engine, this.voiceEl.value);
+      this.handlers.onEngine(engine);
+      this.handlers.onVoice(this.voiceEl.value);
+    });
+
+    this.voiceEl.addEventListener("change", () => {
+      this.handlers.onVoice(this.voiceEl.value);
     });
 
     this.progressEl.addEventListener("input", () => {
@@ -106,6 +152,40 @@ export class PlayerUI {
     if (dock === "floating") this.root.classList.add("listen-dock-floating");
   }
 
+  /** Fill the engine/voice pickers from the cached server catalog. */
+  setCatalog(catalog: ServerCatalog, settings: Settings) {
+    this.catalogVoices = catalog.voices.voices;
+
+    this.engineEl.innerHTML = "";
+    const auto = document.createElement("option");
+    auto.value = "auto";
+    auto.textContent = "Auto (best available)";
+    this.engineEl.appendChild(auto);
+    for (const engine of catalog.engines.engines) {
+      const opt = document.createElement("option");
+      opt.value = engine.id;
+      opt.textContent = engineOptionLabel(engine);
+      opt.disabled = !engine.available && engine.id !== "edge";
+      this.engineEl.appendChild(opt);
+    }
+    this.engineEl.value = settings.engine || "auto";
+    this.fillVoices(this.engineEl.value as EngineId, settings.voiceId);
+  }
+
+  private fillVoices(engine: EngineId, selected: string) {
+    if (!this.catalogVoices.length) return;
+    const list = voicesForEngine(this.catalogVoices, engine);
+    this.voiceEl.innerHTML = "";
+    for (const voice of list) {
+      const opt = document.createElement("option");
+      opt.value = voice.id;
+      opt.textContent = voice.name;
+      this.voiceEl.appendChild(opt);
+    }
+    if (list.some((v) => v.id === selected)) this.voiceEl.value = selected;
+    else if (list[0]) this.voiceEl.value = list[0].id;
+  }
+
   setSections(doc: DocumentModel, activeIndex: number) {
     this.sectionsEl.innerHTML = "";
     doc.sections.forEach((sec, i) => {
@@ -115,11 +195,21 @@ export class PlayerUI {
       btn.addEventListener("click", () => this.handlers.onSection(i));
       this.sectionsEl.appendChild(btn);
     });
+
+    // One "chapter" is just the whole page, so the controls would be no-ops.
+    const hasChapters = doc.sections.length > 1;
+    this.chaptersBtn.hidden = !hasChapters;
+    for (const btn of this.sectionNavBtns) btn.hidden = !hasChapters;
+    if (!hasChapters && this.sectionsOpen) {
+      this.sectionsOpen = false;
+      this.sectionsEl.classList.remove("open");
+      this.chaptersBtn.classList.remove("active");
+    }
   }
 
   update(snapshot: PlayerSnapshot) {
-    this.titleEl.textContent = snapshot.title || "Listen";
-    this.metaEl.textContent = `${snapshot.speed}× · sec ${snapshot.sectionIndex + 1}`;
+    this.titleEl.textContent = snapshot.title || "TalkToMe";
+    this.metaEl.textContent = snapshot.engine ? `${snapshot.engine} · ${snapshot.speed}×` : `${snapshot.speed}×`;
     this.progressEl.value = String(Math.round(snapshot.progress * 1000));
     this.speedEl.value = String(snapshot.speed);
     this.playBtn.textContent = snapshot.state === "playing" ? "❚❚" : "▶";
@@ -146,6 +236,18 @@ export class PlayerUI {
   }
 }
 
+interface CacheEntry {
+  url: string;
+  engine: string;
+  speedApplied: number;
+}
+
+const SYNTHESIS_KEYS = ["engine", "voiceId", "emotion", "style", "speed", "serverUrl"] as const;
+
+function affectsSynthesis(a: Settings, b: Settings): boolean {
+  return SYNTHESIS_KEYS.some((key) => a[key] !== b[key]);
+}
+
 /** Sequential TTS playback with sentence highlighting + prefetch. */
 export class PlaybackController {
   private audio = new Audio();
@@ -155,12 +257,14 @@ export class PlaybackController {
   private doc: DocumentModel | null = null;
   private settings!: Settings;
   private client!: TtsClient;
-  private cache = new Map<number, { url: string; engine: string }>();
+  private cache = new Map<number, CacheEntry>();
   private prefetching = new Set<number>();
   private wordTimer: number | null = null;
   private destroyed = false;
   private onChange: (s: PlayerSnapshot) => void;
   private lastEngine = "unknown";
+  /** Bumped whenever synthesis parameters change, to strand in-flight fetches. */
+  private epoch = 0;
 
   constructor(onChange: (s: PlayerSnapshot) => void) {
     this.onChange = onChange;
@@ -170,9 +274,15 @@ export class PlaybackController {
   }
 
   configure(settings: Settings) {
+    const previous = this.settings;
     this.settings = settings;
     this.client = TtsClient.fromSettings(settings);
-    this.audio.playbackRate = settings.speed;
+    if (previous && affectsSynthesis(previous, settings)) {
+      this.invalidateCache();
+      if (this.state === "playing" || this.state === "paused") void this.playCurrent();
+      return;
+    }
+    this.applyPlaybackRate();
   }
 
   snapshot(): PlayerSnapshot {
@@ -184,7 +294,19 @@ export class PlaybackController {
       sentenceIndex: this.sentenceIndex,
       progress: this.sentenceIndex / total,
       title: this.doc?.title,
+      engine: this.lastEngine === "unknown" ? undefined : this.lastEngine,
     };
+  }
+
+  /**
+   * Speed is baked into the audio by some engines and not others, so the
+   * residual is what's left for the element. Applying the full multiplier on
+   * top of pre-sped audio squares it.
+   */
+  private applyPlaybackRate(speedApplied?: number) {
+    const applied = speedApplied ?? this.cache.get(this.sentenceIndex)?.speedApplied ?? 1;
+    const residual = (this.settings?.speed ?? 1) / (applied || 1);
+    this.audio.playbackRate = Math.min(4, Math.max(0.25, residual));
   }
 
   private emit(extra: Partial<PlayerSnapshot> = {}) {
@@ -243,16 +365,33 @@ export class PlaybackController {
   }
 
   setSpeed(speed: number) {
+    const bakedIn = (this.cache.get(this.sentenceIndex)?.speedApplied ?? 1) !== 1;
     this.settings.speed = speed;
-    // Invalidate cache — speed may be baked into Edge/Kokoro audio
-    this.clearCache();
-    if (this.lastEngine === "edge" || this.lastEngine === "kokoro") {
-      this.audio.playbackRate = 1;
-      void this.playCurrent();
-    } else {
-      this.audio.playbackRate = speed;
+    if (!bakedIn) {
+      // Audio is speed-agnostic, so retune playback and keep the cache warm.
+      this.applyPlaybackRate(1);
+      this.emit();
+      return;
     }
+    this.invalidateCache();
     this.emit();
+    void this.playCurrent();
+  }
+
+  setEngine(engine: EngineId) {
+    if (this.settings.engine === engine) return;
+    this.settings.engine = engine;
+    this.invalidateCache();
+    this.emit();
+    if (this.state !== "idle") void this.playCurrent();
+  }
+
+  setVoice(voiceId: string) {
+    if (this.settings.voiceId === voiceId) return;
+    this.settings.voiceId = voiceId;
+    this.invalidateCache();
+    this.emit();
+    if (this.state !== "idle") void this.playCurrent();
   }
 
   async skip(seconds: number) {
@@ -319,12 +458,11 @@ export class PlaybackController {
     this.emit();
 
     try {
-      const { url, engine } = await this.getAudioUrl(this.sentenceIndex);
+      const { url, engine, speedApplied } = await this.getAudioUrl(this.sentenceIndex);
       this.lastEngine = engine;
       void this.prefetchAround(this.sentenceIndex);
       this.audio.src = url;
-      // Edge/Kokoro bake speed server-side — don't double-apply
-      this.audio.playbackRate = engine === "edge" || engine === "kokoro" ? 1 : this.settings.speed;
+      this.applyPlaybackRate(speedApplied);
       await this.audio.play();
       this.state = "playing";
       this.emit();
@@ -381,11 +519,12 @@ export class PlaybackController {
     await this.playCurrent();
   }
 
-  private async getAudioUrl(index: number): Promise<{ url: string; engine: string }> {
+  private async getAudioUrl(index: number): Promise<CacheEntry> {
     const cached = this.cache.get(index);
     if (cached) return cached;
+    const epoch = this.epoch;
     const sentence = this.doc!.flatSentences[index];
-    const { buffer, engine, format } = await this.client.synthesize(sentence.text, {
+    const { buffer, engine, format, speedApplied } = await this.client.synthesize(sentence.text, {
       voiceId: this.settings.voiceId || undefined,
       engine: this.settings.engine,
       emotion: this.settings.emotion,
@@ -393,9 +532,14 @@ export class PlaybackController {
       speed: this.settings.speed,
     });
     const mime = format === "mp3" ? "audio/mpeg" : "audio/wav";
-    const blob = new Blob([buffer], { type: mime });
-    const url = URL.createObjectURL(blob);
-    const entry = { url, engine };
+    const url = URL.createObjectURL(new Blob([buffer], { type: mime }));
+    const entry: CacheEntry = { url, engine, speedApplied };
+    // Settings changed while this was in flight: the audio is stale, and
+    // caching it would resurrect the old voice or speed a few sentences later.
+    if (epoch !== this.epoch) {
+      URL.revokeObjectURL(url);
+      return entry;
+    }
     this.cache.set(index, entry);
     return entry;
   }
@@ -427,6 +571,13 @@ export class PlaybackController {
   private clearCache() {
     for (const { url } of this.cache.values()) URL.revokeObjectURL(url);
     this.cache.clear();
+  }
+
+  /** Drop cached audio and strand in-flight prefetches from the old settings. */
+  private invalidateCache() {
+    this.epoch += 1;
+    this.prefetching.clear();
+    this.clearCache();
   }
 
   destroy() {

@@ -1,6 +1,6 @@
 {
-  "name": "listen-extension",
-  "version": "0.1.0",
+  "name": "talktome-extension",
+  "version": "0.0.8",
   "private": true,
   "type": "module",
   "scripts": {
