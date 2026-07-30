@@ -1,8 +1,8 @@
 # TalkToMe
 
-Natural text-to-speech for the web. A Chromium extension plus a macOS menu-bar companion that reads any page aloud with Edge Neural, Kokoro, Qwen3, MOSS, OmniVoice, Step-Audio-EditX, or system speech.
+Natural (not robotic) text-to-speech for the browser. A Chromium extension plus a macOS menu-bar companion that reads any page aloud with Edge Neural, Kokoro, Qwen3, MOSS, OmniVoice, Step-Audio-EditX, or system speech.
 
-**Author:** [Samy Kamkar](https://sa.my) · **Homepage:** https://sa.my · **Version:** 0.0.8
+**Author:** [samy kamkar](https://sa.my) · **Version:** 0.0.8
 
 ## Architecture
 
