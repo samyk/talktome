@@ -283,16 +283,27 @@
   all: initial;
   pointer-events: auto;
   position: fixed !important;
-  transform: translate(-50%, calc(-100% - 8px));
+  display: inline-flex !important;
+  align-items: center;
+  gap: 8px;
+  transform: translate(-50%, calc(-100% - 10px));
   margin: 0;
-  padding: 7px 12px;
-  border: 1px solid #2a3340;
-  border-radius: 8px;
-  background: #1b222c;
-  color: #f4f1ea;
-  font-family: Inter, ui-rounded, "SF Pro Display", "Segoe UI", system-ui, sans-serif;
-  font-size: 12px;
+  padding: 8px 14px 8px 11px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  background: #171c24;
+  color: #f5f2ea;
+  font-family:
+    "Avenir Next",
+    "SF Pro Rounded",
+    "SF Pro Display",
+    "Segoe UI Variable Display",
+    "Segoe UI",
+    system-ui,
+    sans-serif;
+  font-size: 13px;
   font-weight: 650;
+  letter-spacing: -0.02em;
   line-height: 1;
   box-shadow: none;
   filter: none;
@@ -304,13 +315,42 @@
   -webkit-user-select: none !important;
 }
 
+.listen-selection-chip-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: #6574f7;
+  color: #fff;
+  flex: 0 0 auto;
+}
+
+.listen-selection-chip-icon svg {
+  display: block;
+}
+
+.listen-selection-chip-label {
+  display: inline-block;
+  font: inherit;
+  letter-spacing: inherit;
+  color: inherit;
+  transform: translateY(0.5px);
+}
+
 .listen-selection-chip:hover {
-  background: #243040;
+  background: #1f2631;
+  border-color: rgba(255, 255, 255, 0.16);
   color: #fff;
 }
 
+.listen-selection-chip:hover .listen-selection-chip-icon {
+  background: #7280ff;
+}
+
 .listen-selection-chip:active {
-  background: #151b24;
+  background: #12171e;
 }
 
 .listen-btn:focus-visible,

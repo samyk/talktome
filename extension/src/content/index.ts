@@ -128,6 +128,11 @@ function hideSelectionChip() {
   selectionChip = null;
 }
 
+function selectionWordCount(text: string): number {
+  const parts = text.trim().match(/\S+/g);
+  return parts?.length ?? 0;
+}
+
 function selectionTouchesListenUi(sel: Selection): boolean {
   for (let i = 0; i < sel.rangeCount; i++) {
     const range = sel.getRangeAt(i);
@@ -153,7 +158,13 @@ function showSelectionChip() {
     return;
   }
   const sel = window.getSelection();
-  if (!sel || sel.isCollapsed || !sel.toString().trim()) {
+  const text = sel?.toString() ?? "";
+  if (!sel || sel.isCollapsed || !text.trim()) {
+    hideSelectionChip();
+    return;
+  }
+  // Short highlights are better served by the context menu / shortcuts.
+  if (selectionWordCount(text) <= 20) {
     hideSelectionChip();
     return;
   }
@@ -177,8 +188,18 @@ function showSelectionChip() {
     selectionChip = document.createElement("button");
     selectionChip.className = "listen-selection-chip";
     selectionChip.type = "button";
-    selectionChip.textContent = "TalkToMe";
+    selectionChip.setAttribute("aria-label", "TalkToMe");
     selectionChip.setAttribute("contenteditable", "false");
+    selectionChip.innerHTML = `
+      <span class="listen-selection-chip-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none">
+          <path d="M4.5 9.5v5h3.2L12 18.6V5.4L7.7 9.5H4.5Z" fill="currentColor"/>
+          <path d="M15.2 9.1a3.6 3.6 0 0 1 0 5.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+          <path d="M17.4 6.6a6.4 6.4 0 0 1 0 10.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+        </svg>
+      </span>
+      <span class="listen-selection-chip-label">TalkToMe</span>
+    `;
     selectionChip.addEventListener("mousedown", (e) => {
       e.preventDefault();
       e.stopPropagation();
