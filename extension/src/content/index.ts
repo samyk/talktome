@@ -148,6 +148,10 @@ function isSelectAllIsh(sel: Selection): boolean {
 }
 
 function showSelectionChip() {
+  if (!settings?.selectionChip) {
+    hideSelectionChip();
+    return;
+  }
   const sel = window.getSelection();
   if (!sel || sel.isCollapsed || !sel.toString().trim()) {
     hideSelectionChip();
@@ -285,6 +289,7 @@ chrome.runtime.onMessage.addListener((message: ExtensionMessage, _sender, sendRe
         settings = message.settings;
         controller?.configure(settings);
         ui?.setDock(settings.playerDock);
+        if (!settings.selectionChip) hideSelectionChip();
         sendResponse({ ok: true });
         break;
       default:

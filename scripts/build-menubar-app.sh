@@ -14,7 +14,7 @@ SWIFT_SRC="${ROOT}/macos-app/ListenTray/main.swift"
 BIN_NAME="TalkToMe"
 DEPLOY_TARGET="12.0"
 BUNDLE_ID="com.talktome.app"
-VERSION="0.0.8"
+VERSION="0.0.9"
 TEAM_ID="${LISTEN_TEAM_ID:-729MKH4M8C}"
 NOTARY_PROFILE="${LISTEN_NOTARY_PROFILE:-listen-notary}"
 PKG_OUT="${OUT}/Install-TalkToMe.pkg"
@@ -105,7 +105,7 @@ cat > "${CONTENTS}/Info.plist" << PLIST
   <key>CFBundleName</key><string>${APP_NAME}</string>
   <key>CFBundleDisplayName</key><string>${APP_NAME}</string>
   <key>CFBundleIdentifier</key><string>${BUNDLE_ID}</string>
-  <key>CFBundleVersion</key><string>8</string>
+  <key>CFBundleVersion</key><string>9</string>
   <key>CFBundleShortVersionString</key><string>${VERSION}</string>
   <key>CFBundleExecutable</key><string>${BIN_NAME}</string>
   <key>CFBundlePackageType</key><string>APPL</string>

@@ -12,6 +12,7 @@ const els = {
   highlightMode: document.getElementById("highlightMode") as HTMLSelectElement,
   autoScroll: document.getElementById("autoScroll") as HTMLInputElement,
   skipNavChrome: document.getElementById("skipNavChrome") as HTMLInputElement,
+  selectionChip: document.getElementById("selectionChip") as HTMLInputElement,
   playerDock: document.getElementById("playerDock") as HTMLSelectElement,
   serverStatus: document.getElementById("server-status")!,
   library: document.getElementById("library")!,
@@ -65,6 +66,7 @@ async function hydrate() {
   els.highlightMode.value = settings.highlightMode;
   els.autoScroll.checked = settings.autoScroll;
   els.skipNavChrome.checked = settings.skipNavChrome;
+  els.selectionChip.checked = settings.selectionChip;
   els.playerDock.value = settings.playerDock;
 
   try {
@@ -102,6 +104,7 @@ function readForm(): Partial<Settings> {
     highlightMode: els.highlightMode.value as Settings["highlightMode"],
     autoScroll: els.autoScroll.checked,
     skipNavChrome: els.skipNavChrome.checked,
+    selectionChip: els.selectionChip.checked,
     playerDock: els.playerDock.value as Settings["playerDock"],
   };
 }

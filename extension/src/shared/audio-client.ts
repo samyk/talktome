@@ -1,4 +1,5 @@
 import type { EngineId, Settings } from "./types";
+import { extensionFetch } from "./extension-fetch";
 
 export interface VoiceInfo {
   id: string;
@@ -56,19 +57,19 @@ export class TtsClient {
   }
 
   async health(): Promise<HealthInfo> {
-    const res = await fetch(`${this.serverUrl}/health`);
+    const res = await extensionFetch(`${this.serverUrl}/health`);
     if (!res.ok) throw new Error(`Server health failed (${res.status})`);
     return res.json();
   }
 
   async voices(): Promise<VoicesPayload> {
-    const res = await fetch(`${this.serverUrl}/v1/voices`);
+    const res = await extensionFetch(`${this.serverUrl}/v1/voices`);
     if (!res.ok) throw new Error(`Voices failed (${res.status})`);
     return res.json();
   }
 
   async engines(): Promise<EnginesPayload> {
-    const res = await fetch(`${this.serverUrl}/v1/engines`);
+    const res = await extensionFetch(`${this.serverUrl}/v1/engines`);
     if (!res.ok) throw new Error(`Engines failed (${res.status})`);
     return res.json();
   }
@@ -83,7 +84,7 @@ export class TtsClient {
       speed?: number;
     } = {},
   ): Promise<SynthesisResult> {
-    const res = await fetch(`${this.serverUrl}/v1/tts`, {
+    const res = await extensionFetch(`${this.serverUrl}/v1/tts`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

@@ -1,5 +1,9 @@
 import { TtsClient } from "../shared/audio-client";
 import { fetchCatalog } from "../shared/catalog";
+import {
+  performProxyFetch,
+  type ProxyFetchRequest,
+} from "../shared/extension-fetch";
 import { getSettings } from "../shared/settings";
 import type { ExtensionMessage } from "../shared/types";
 
@@ -49,9 +53,15 @@ chrome.commands.onCommand.addListener((command) => {
   if (command === "read-page") void sendToActiveTab({ type: "PLAY_PAGE" });
 });
 
-chrome.runtime.onMessage.addListener((message: ExtensionMessage, _sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   void (async () => {
-    if (message.type === "SERVER_STATUS") {
+    if ((message as ProxyFetchRequest)?.type === "PROXY_FETCH") {
+      sendResponse(await performProxyFetch(message as ProxyFetchRequest));
+      return;
+    }
+
+    const msg = message as ExtensionMessage;
+    if (msg.type === "SERVER_STATUS") {
       try {
         const settings = await getSettings();
         const health = await TtsClient.fromSettings(settings).health();
@@ -64,8 +74,7 @@ chrome.runtime.onMessage.addListener((message: ExtensionMessage, _sender, sendRe
       }
       return;
     }
-    if (message.type === "PLAYER_STATE") {
-      // Could update badge here
+    if (msg.type === "PLAYER_STATE") {
       sendResponse({ ok: true });
       return;
     }

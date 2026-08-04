@@ -8,7 +8,7 @@ export default defineManifest({
   // Chrome accepts a string; @types/chrome only models { email }.
   author: "Samy Kamkar" as unknown as { email: string },
   homepage_url: "https://sa.my",
-  version: "0.0.8",
+  version: "0.0.9",
   action: {
     default_popup: "src/popup/popup.html",
     default_title: "TalkToMe",

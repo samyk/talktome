@@ -1,7 +1,7 @@
 {
   "name": "talktome",
   "private": true,
-  "version": "0.0.8",
+  "version": "0.0.9",
   "scripts": {
     "assets": "python3 scripts/generate-assets.py",
     "ext:install": "npm --prefix extension install",

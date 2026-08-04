@@ -135,6 +135,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
     expose_headers=EXPOSED_HEADERS,
+    # Chrome content scripts on https:// pages send Access-Control-Request-
+    # Private-Network on the preflight. Without this, Starlette answers
+    # "Disallowed CORS private-network" and the page sees Failed to fetch.
+    allow_private_network=True,
 )
 
 

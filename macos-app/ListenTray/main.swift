@@ -10,7 +10,7 @@ let appName = "TalkToMe"
 let bundleId = "com.talktome.app"
 /// Keep in sync with CFBundleShortVersionString in the build script.
 let appVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
-    ?? "0.0.8"
+    ?? "0.0.9"
 let host = "127.0.0.1"
 let port = 8765
 

@@ -20,6 +20,8 @@ export interface Settings {
   autoScroll: boolean;
   highlightMode: "word" | "sentence" | "paragraph";
   skipNavChrome: boolean;
+  /** Floating TalkToMe chip when selecting text. Off by default — use shortcuts / context menu. */
+  selectionChip: boolean;
   playerDock: "bottom" | "top" | "floating";
   theme: "auto" | "light" | "dark";
 }
@@ -34,6 +36,7 @@ export const DEFAULT_SETTINGS: Settings = {
   autoScroll: true,
   highlightMode: "sentence",
   skipNavChrome: true,
+  selectionChip: false,
   playerDock: "bottom",
   theme: "auto",
 };

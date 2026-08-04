@@ -2,7 +2,7 @@
 
 Natural (not robotic) text-to-speech for the browser. A Chromium extension plus a macOS menu-bar companion that reads any page aloud with Edge Neural, Kokoro, Qwen3, MOSS, OmniVoice, Step-Audio-EditX, or system speech.
 
-**Author:** [samy kamkar](https://sa.my) · **Version:** 0.0.8
+**Author:** [samy kamkar](https://sa.my) · **Version:** 0.0.9
 
 ## Architecture
 
@@ -17,13 +17,15 @@ The model never runs in the browser. The extension extracts readable text, highl
 
 ## Features
 
-- Play full page or selection (toolbar, context menu, floating **TalkToMe** chip)
+- Play full page or selection (toolbar, context menu, shortcuts)
+- Optional selection chip (**off by default** — Settings → Show TalkToMe chip when selecting text)
 - In-page player with engine / voice / speed controls
 - Chapters from headings (`H1–H6`) when the page has more than one
 - Speeds **0.5×–4.5×** (server-baked for Edge/Kokoro; residual `playbackRate` elsewhere)
 - Sentence / word highlighting; click a sentence to jump there
 - ±15s skip, scrubber, dock (bottom / top / floating)
-- Neumorphic popup, settings, chip, and player
+- Neumorphic popup, settings, and player (flat selection chip when enabled)
+- Content-script TTS proxied through the service worker (fixes Chrome Private Network Access `Failed to fetch` on https pages)
 - Cached engine/voice catalog so the popup paints instantly
 - Offline article library (extension local storage)
 - Shortcuts: `⌥⇧L` page · `⌥⇧S` selection · `⌥⇧P` play/pause
@@ -101,7 +103,9 @@ Manifest metadata: name **TalkToMe**, author **Samy Kamkar**, homepage **https:/
 
 `LISTEN_ENGINE=auto` prefers Edge when online, then `LISTEN_FALLBACK_ENGINE` (typically Kokoro). Pick engine / voice / speed in the popup, settings, or in-page player footer.
 
-TTS responses expose `X-TalkToMe-Engine` / `X-TalkToMe-Speed` (CORS-exposed) so the client does not double-apply speed.
+TTS responses expose `X-TalkToMe-Engine` / `X-TalkToMe-Speed` (CORS-exposed). The server also sets `allow_private_network` for Chrome preflights; content scripts still talk to localhost via the background worker so https pages cannot break speech.
+
+Selection chip: Settings → **Show TalkToMe chip when selecting text** (default off). Otherwise use the toolbar, context menu, or shortcuts.
 
 ### EditX (optional GPU)
 
