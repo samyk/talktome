@@ -199,7 +199,11 @@ function showSelectionChip() {
 document.addEventListener("mouseup", () => {
   window.setTimeout(showSelectionChip, 0);
 });
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") hideSelectionChip();
+});
 document.addEventListener("keyup", (e) => {
+  if (e.key === "Escape") return;
   if (e.key === "Shift" || e.key.startsWith("Arrow")) {
     window.setTimeout(showSelectionChip, 0);
   }
